@@ -133,9 +133,11 @@ log "=== END: Boot Device Detection ==="
 # === Target disk candidates ===
 # ==============================
 
+# Candidate file
 # Format: "SIZE_MB NAME TYPE_PRIORITY"
 # Typ: 1=NVMe, 2=SSD (SATA/VirtIO non-rot), 3=HDD (rotational)
-CANDIDATES=""
+CANDIDATE_FILE="/tmp/candidates.txt"
+> "$CANDIDATE_FILE" # Datei leer machen
 
 # Durchlaufe ALLE Block-Geräte im System
 log "=== START: Candidate identification ==="
@@ -194,11 +196,12 @@ for dev_path in /sys/block/*; do
     fi
 
     log "Found candidate: $DEV_NAME (${SIZE}MB, Type: $TYPE)"
-    CANDIDATES="${CANDIDATES}
-${SIZE} ${DEV_NAME} ${TYPE}"
+    echo "$SIZE $DEV_NAME $TYPE" >> "$CANDIDATE_FILE"
 done
-log "candiates with size in MB, name, type (1=NVMe, 2=SATA SDD, 3=SATA HDD):"
-log $CANDIDATES
+# --- Anzeige der Kandidaten (Debug) ---
+log "Raw candidates list:"
+cat "$CANDIDATE_FILE" > "$LOG_TERM" # Zeigt die Liste sauber auf TTY3
+cat "$CANDIDATE_FILE" >> "$LOG_FILE"
 log "=== END: Candidate identification ==="
 
 # =============================
@@ -206,7 +209,7 @@ log "=== END: Candidate identification ==="
 # =============================
 log "=== START: Candidate selection ==="
 # Sortiere nach: 1. Typ (aufsteigend), 2. Größe (aufsteigend)
-BEST_MATCH=$(echo "$CANDIDATES" | grep -v '^$' | sort -k3,3n -k1,1n | head -n1)
+BEST_MATCH=$(sort -k3,3n -k1,1n "$CANDIDATE_FILE" | head -n1)
 
 TARGET=""
 if [ -n "$BEST_MATCH" ]; then
