@@ -233,7 +233,7 @@ log "=== END: Candidate selection ==="
 log "=== START: debconf-set ==="
 log "executing 'debconf-set partman-auto/disk $TARGET'"
 if [ ! -b "$TARGET" ]; then
-    log "ERROR: Device $TARGETdoes not exist!"
+    log "ERROR: Device $TARGET does not exist!"
     # Liste verfügbare Devices zur Fehlersuche
     log "Available block devices:"
     ls /dev/sd* /dev/nvme* 2>/dev/null >> "$LOG_FILE"
