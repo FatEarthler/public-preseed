@@ -229,10 +229,13 @@ if [ ! -b "$TARGET" ]; then
     ls /dev/sd* /dev/nvme* 2>/dev/null >> "$LOG_FILE"
     ls /dev/sd* /dev/nvme* 2>/dev/null > "$LOG_TERM"
 else
-    log "Device $TARGET_DISK found. Setting debconf variable."
-    # Die eigentliche Magie: Variable setzen
+    log "Device $TARGET_DISK found. Setting debconf variables."
+    # Setting partitioning target
     debconf-set partman-auto/disk "$TARGET"
     log "SUCCESS: partman-auto/disk set to $TARGET"
+    # Setting grub target
+    debconf-set grub-installer/bootdev "$TARGET"
+    log "SUCCESS: GRUB installation target set to: $TARGET"
 fi
 
 log "=== END: debconf-set ==="
