@@ -205,20 +205,35 @@ log "=== END: Candidate identification ==="
 # === Target disk selection ===
 # =============================
 log "=== START: Candidate selection ==="
+# Sortiere nach: 1. Typ (aufsteigend), 2. Größe (aufsteigend)
+BEST_MATCH=$(echo "$CANDIDATES" | grep -v '^$' | sort -k3,3n -k1,1n | head -n1)
 
-# --- 1. Einfache Zielsetzung (Ihr Test-Setup) ---
-# Hier später die komplexe Logik einfügen
-TARGET_DISK="/dev/sdq"
+TARGET=""
+if [ -n "$BEST_MATCH" ]; then
+    TARGET_NAME=$(echo "$BEST_MATCH" | awk '{print $2}')
+    TARGET="/dev/$TARGET_NAME"
+    log "SELECTED TARGET: $TARGET (Size: $(echo $BEST_MATCH | awk '{print $1}')MB, Type: $(echo $BEST_MATCH | awk '{print $3}'))"
+    
+    log "Identified $TARGET as installation target"
+else
+    log "ERROR: No suitable target disk found!"
+    log "Candidates were: $CANDIDATES"
+    log "Boot Disk was: $BOOT_DISK"
+fi
 
-log "Setting target disk to: $TARGET_DISK"
+# making it fail on purpose for testing
+TARGET="/dev/sdqd"
+
 log "=== END: Candidate selection ==="
 
 # ================================
 # === Setting partman variable ===
 # ================================
 # Prüfen, ob das Gerät existiert
-if [ ! -b "$TARGET_DISK" ]; then
-    log "ERROR: Device $TARGET_DISK does not exist!"
+log "=== START: debconf-set ==="
+log "executing 'debconf-set partman-auto/disk $TARGET'"
+if [ ! -b "$TARGET" ]; then
+    log "ERROR: Device $TARGETdoes not exist!"
     # Liste verfügbare Devices zur Fehlersuche
     log "Available block devices:"
     ls /dev/sd* /dev/nvme* 2>/dev/null >> "$LOG_FILE"
@@ -226,8 +241,10 @@ if [ ! -b "$TARGET_DISK" ]; then
 else
     log "Device $TARGET_DISK found. Setting debconf variable."
     # Die eigentliche Magie: Variable setzen
-    debconf-set partman-auto/disk "$TARGET_DISK"
-    log "SUCCESS: partman-auto/disk set to $TARGET_DISK"
+    debconf-set partman-auto/disk "$TARGET"
+    log "SUCCESS: partman-auto/disk set to $TARGET"
 fi
+
+log "=== END: debconf-set ==="
 
 log "=== End Disk Selection Script ==="
