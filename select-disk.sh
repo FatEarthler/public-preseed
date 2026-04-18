@@ -116,13 +116,6 @@ fi
 # --- 4. Ergebnis ausgeben ---
 if [ -n "$BOOT_DISK" ]; then
     log "SUCCESS: Boot Base Disk identified as: /dev/$BOOT_DISK"
-    # Wir speichern das Ergebnis in einer Variable, die wir später nutzen können
-    # Oder wir setzen es direkt als Umgebungsvariable für nachfolgende Schritte (falls in einem Script)
-    # Für jetzt loggen wir es nur und setzen es als Test auf partman-auto/disk (nur zum Verifizieren!)
-    # ACHTUNG: Hier setzen wir noch NICHT partman-auto/disk, da wir erst die Ziel-Disk finden müssen!
-    # Aber wir können es als Referenz speichern:
-    echo "$BOOT_DISK" > /tmp/boot_disk_name.txt
-    log "Boot disk name saved to /tmp/boot_disk_name.txt"
 else
     log "ERROR: Boot disk detection failed completely."
 fi
@@ -148,15 +141,15 @@ for dev_path in /sys/block/*; do
     # 1. Filter: Ist es ein Block Device?
     if [ ! -b "$DISK" ]; then continue; fi
 
-    # 2. Filter: Ignoriere System-Geräte (RAM, Loop, CD-ROM)
-    if echo "$DEV_NAME" | grep -qE '^(ram|loop|sr|md)'; then
-        log "Skipping system device: $DEV_NAME"
+    # 2. Filter: Ignoriere das BOOT-GERÄT
+    if [ -n "$BOOT_DISK" ] && [ "$DEV_NAME" = "$BOOT_DISK" ]; then
+        log "Skipping BOOT device: $DEV_NAME"
         continue
     fi
 
-    # 3. Filter: CRITICAL - Ignoriere das BOOT-GERÄT
-    if [ -n "$BOOT_DISK" ] && [ "$DEV_NAME" = "$BOOT_DISK" ]; then
-        log "Skipping BOOT device: $DEV_NAME"
+    # 3. Filter: Ignoriere System-Geräte (RAM, Loop, CD-ROM)
+    if echo "$DEV_NAME" | grep -qE '^(ram|loop|sr|md)'; then
+        log "Skipping system device: $DEV_NAME"
         continue
     fi
 
@@ -223,9 +216,6 @@ else
     log "Candidates were: $CANDIDATES"
     log "Boot Disk was: $BOOT_DISK"
 fi
-
-# making it fail on purpose for testing
-TARGET="/dev/sdqd"
 
 log "=== END: Candidate selection ==="
 
