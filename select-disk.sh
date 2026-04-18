@@ -172,6 +172,13 @@ for dev_path in /sys/block/*; do
         continue
     fi
 
+    # check minimum disk size (20 GB = 20 * 1024 = 20480 MB)
+    MIN_SIZE_MB=20000
+    if [ -z "$SIZE" ] || [ "$SIZE" -lt "$MIN_SIZE_MB" ]; then
+        log "Skipping $DEV_NAME (Size: ${SIZE}MB is below minimum ${MIN_SIZE_MB}MB)"
+        continue
+    fi
+
     # Typ bestimmen (NVMe vs SSD vs HDD)
     TYPE=3 # Default: HDD
     if echo "$DEV_NAME" | grep -q '^nvme'; then
