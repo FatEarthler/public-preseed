@@ -21,21 +21,37 @@ log "=== START: Boot Device Detection ==="
 # --- 1. Versuch: Erkennung über Label (/dev/disk/by-label) ---
 # Die meisten Installer-Sticks haben ein Label (z.B. "DEBIAN_12", "KALI")
 BOOT_DEV_RAW=""
-if ls /dev/disk/by-label/* 2>&1; then
+log "Checking /dev/disk/by-label"
+if ls /dev/disk/by-label/* >/dev/null 2>&1; then
     # Nimm das erste gefundene Label und löse es zum echten Device auf
     BOOT_DEV_RAW=$(readlink -f /dev/disk/by-label/* 2>/dev/null | head -n1)
     if [ -n "$BOOT_DEV_RAW" ]; then
         log "Found boot device via Label: $BOOT_DEV_RAW"
     fi
+else
+	log "No disks found by label"
 fi
 
-# --- 2. Versuch: Erkennung über Mount-Punkt (/isodevice) ---
+# --- 2. Versuch: Erkennung über Mount-Punkte ---
 # Falls kein Label da ist, prüfen wir, wo das ISO gemountet ist
+log "Checking mount points"
 if [ -z "$BOOT_DEV_RAW" ]; then
-    MOUNT_LINE=$(mount | grep '/isodevice')
-    if [ -n "$MOUNT_LINE" ]; then
-        BOOT_DEV_RAW=$(echo "$MOUNT_LINE" | awk '{print $1}')
-        log "Found boot device via Mount (/isodevice): $BOOT_DEV_RAW"
+    # A. Prüfen auf /isodevice (Standard bei USB-Installationen)
+    if mount | grep -q '/isodevice'; then
+        BOOT_DEV_RAW=$(mount | grep '/isodevice' | awk '{print $1}')
+        log "Found boot device via /isodevice: $BOOT_DEV_RAW"
+    # B. Prüfen auf /cdrom (Standard bei ISO/VM-Installationen wie in Ihrem Screenshot)
+    elif mount | grep -q '/cdrom'; then
+        BOOT_DEV_RAW=$(mount | grep '/cdrom' | awk '{print $1}')
+        log "Found boot device via /cdrom: $BOOT_DEV_RAW"
+    # C. Fallback: Suche nach dem Gerät, auf dem '/' gemountet ist (Live-System)
+    # Oft ist das im Installer ein tmpfs, aber das Root-Filesystem liegt auf dem Stick
+    else
+        # Wir prüfen, ob /dev/sr0 gemountet ist (häufig bei VMs)
+        if [ -b "/dev/sr0" ]; then
+             BOOT_DEV_RAW="/dev/sr0"
+             log "Fallback: Assuming /dev/sr0 is boot device."
+        fi
     fi
 fi
 
