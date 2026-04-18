@@ -132,6 +132,11 @@ log "=== END: Boot Device Detection ==="
 # ==============================
 # === Target disk candidates ===
 # ==============================
+
+# Format: "SIZE_MB NAME TYPE_PRIORITY"
+# Typ: 1=NVMe, 2=SSD (SATA/VirtIO non-rot), 3=HDD (rotational)
+CANDIDATES=""
+
 # Durchlaufe ALLE Block-Geräte im System
 log "=== START: Candidate identification ==="
 for dev_path in /sys/block/*; do
@@ -184,7 +189,7 @@ for dev_path in /sys/block/*; do
     log "Found candidate: $DEV_NAME (${SIZE}MB, Type: $TYPE)"
     CANDIDATES="$CANDIDATES $SIZE $DEV_NAME $TYPE"
 done
-log "CANDIDATES size in MB, name, type (1=NVMe, 2=SATA SDD, 3=SATA HDD):"
+log "candiates with size in MB, name, type (1=NVMe, 2=SATA SDD, 3=SATA HDD):"
 log $CANDIDATES
 log "=== END: Candidate identification ==="
 
