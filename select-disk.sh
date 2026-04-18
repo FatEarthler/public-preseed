@@ -194,7 +194,8 @@ for dev_path in /sys/block/*; do
     fi
 
     log "Found candidate: $DEV_NAME (${SIZE}MB, Type: $TYPE)"
-    CANDIDATES="$CANDIDATES $SIZE $DEV_NAME $TYPE"
+    CANDIDATES="${CANDIDATES}
+${SIZE} ${DEV_NAME} ${TYPE}"
 done
 log "candiates with size in MB, name, type (1=NVMe, 2=SATA SDD, 3=SATA HDD):"
 log $CANDIDATES
