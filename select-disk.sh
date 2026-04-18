@@ -21,7 +21,7 @@ log "=== START: Boot Device Detection ==="
 # --- 1. Versuch: Erkennung über Label (/dev/disk/by-label) ---
 # Die meisten Installer-Sticks haben ein Label (z.B. "DEBIAN_12", "KALI")
 BOOT_DEV_RAW=""
-if ls /dev/disk/by-label/* >/dev/null 2>&1; then
+if ls /dev/disk/by-label/* 2>&1; then
     # Nimm das erste gefundene Label und löse es zum echten Device auf
     BOOT_DEV_RAW=$(readlink -f /dev/disk/by-label/* 2>/dev/null | head -n1)
     if [ -n "$BOOT_DEV_RAW" ]; then
