@@ -129,15 +129,76 @@ fi
 
 log "=== END: Boot Device Detection ==="
 
-# ==================================
-# === Target disk identification ===
-# ==================================
+# ==============================
+# === Target disk candidates ===
+# ==============================
+# Durchlaufe ALLE Block-Geräte im System
+log "=== START: Candidate identification ==="
+for dev_path in /sys/block/*; do
+    DEV_NAME=$(basename "$dev_path")
+    DISK="/dev/$DEV_NAME"
+
+    # 1. Filter: Ist es ein Block Device?
+    if [ ! -b "$DISK" ]; then continue; fi
+
+    # 2. Filter: Ignoriere System-Geräte (RAM, Loop, CD-ROM)
+    if echo "$DEV_NAME" | grep -qE '^(ram|loop|sr|md)'; then
+        log "Skipping system device: $DEV_NAME"
+        continue
+    fi
+
+    # 3. Filter: CRITICAL - Ignoriere das BOOT-GERÄT
+    if [ -n "$BOOT_DISK" ] && [ "$DEV_NAME" = "$BOOT_DISK" ]; then
+        log "Skipping BOOT device: $DEV_NAME"
+        continue
+    fi
+
+    # 4. Filter: Ignoriere USB-Geräte (nur bei sdX relevant, NVMe ist nie USB)
+    # Wir prüfen es zur Sicherheit bei allen, aber es betrifft meist nur sdX
+    if is_usb "$DEV_NAME"; then
+        log "Skipping USB device: $DEV_NAME"
+        continue
+    fi
+
+    # Wenn wir hier sind, ist es eine potenzielle Ziel-Disk
+    SIZE=$(get_size_mb "$DISK")
+    if [ -z "$SIZE" ] || [ "$SIZE" -eq 0 ]; then
+        log "Skipping $DEV_NAME (Size unknown or 0)"
+        continue
+    fi
+
+    # Typ bestimmen (NVMe vs SSD vs HDD)
+    TYPE=3 # Default: HDD
+    if echo "$DEV_NAME" | grep -q '^nvme'; then
+        TYPE=1 # NVMe
+    else
+        # Prüfe rotational für SATA/VirtIO/etc
+        ROT=$(cat "/sys/block/$DEV_NAME/queue/rotational" 2>/dev/null)
+        if [ "$ROT" = "0" ]; then
+            TYPE=2 # SSD
+        else
+            TYPE=3 # HDD
+        fi
+    fi
+
+    log "Found candidate: $DEV_NAME (${SIZE}MB, Type: $TYPE)"
+    CANDIDATES="$CANDIDATES $SIZE $DEV_NAME $TYPE"
+done
+log "CANDIDATES size in MB, name, type (1=NVMe, 2=SATA SDD, 3=SATA HDD):"
+log $CANDIDATES
+log "=== END: Candidate identification ==="
+
+# =============================
+# === Target disk selection ===
+# =============================
+log "=== START: Candidate selection ==="
 
 # --- 1. Einfache Zielsetzung (Ihr Test-Setup) ---
 # Hier später die komplexe Logik einfügen
 TARGET_DISK="/dev/sdq"
 
 log "Setting target disk to: $TARGET_DISK"
+log "=== END: Candidate selection ==="
 
 # ================================
 # === Setting partman variable ===
