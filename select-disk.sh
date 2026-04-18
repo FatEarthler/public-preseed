@@ -4,7 +4,11 @@
 LOG_TERM="/dev/tty3"
 LOG_FILE="/tmp/disk-select.log"
 
-# --- Helper: Log Funktion ---
+# ========================
+# === Helper Functions ===
+# ========================
+
+# --- Log Funktion ---
 log() {
     MSG="DISK-SELECT: $1"
     # 1. Auf den Bildschirm schreiben (tty3)
@@ -13,9 +17,31 @@ log() {
     echo "$MSG" >> "$LOG_FILE"
 }
 
+# --- get disk size in mb ---
+get_size_mb() {
+    blockdev --getsize64 "$1" 2>/dev/null | awk '{print int($1/1048576)}'
+}
+
+# --- Test if usb device ---
+is_usb() {
+    local DEV=$1
+    # Check Transport Attribute
+    if [ -f "/sys/block/$DEV/device/transport" ]; then
+        local TRANS=$(cat "/sys/block/$DEV/device/transport" 2>/dev/null)
+        if [ "$TRANS" = "usb" ]; then return 0; fi
+    fi
+    # Check Sysfs Path
+    local DEVPATH=$(readlink -f "/sys/block/$DEV" 2>/dev/null)
+    if echo "$DEVPATH" | grep -q "/usb"; then return 0; fi
+    return 1
+}
+
+
 log "=== Start Disk Selection Script ==="
 
-
+# =============================
+# === Boot device detection ===
+# =============================
 log "=== START: Boot Device Detection ==="
 
 # --- 1. Versuch: Erkennung über Label (/dev/disk/by-label) ---
@@ -103,7 +129,9 @@ fi
 
 log "=== END: Boot Device Detection ==="
 
-
+# ==================================
+# === Target disk identification ===
+# ==================================
 
 # --- 1. Einfache Zielsetzung (Ihr Test-Setup) ---
 # Hier später die komplexe Logik einfügen
@@ -111,6 +139,9 @@ TARGET_DISK="/dev/sdq"
 
 log "Setting target disk to: $TARGET_DISK"
 
+# ================================
+# === Setting partman variable ===
+# ================================
 # Prüfen, ob das Gerät existiert
 if [ ! -b "$TARGET_DISK" ]; then
     log "ERROR: Device $TARGET_DISK does not exist!"
