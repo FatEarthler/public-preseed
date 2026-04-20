@@ -10,7 +10,7 @@ LOG_FILE="/tmp/disk-select.log"
 
 # --- Log function ---
 log() {
-    MSG="DISK-SELECT: $1"
+    MSG="DISK-SELECT> $1"
     # 1. Print to screen (tty3)
     echo "$MSG" > "$LOG_TERM"
     # 2. Write to logfile
@@ -40,7 +40,7 @@ is_usb() {
 log "==================================="
 log "=== Start Disk Selection Script ==="
 log "==================================="
-log "Log messages will be written to tty3 and $LOG_FILE"
+log "Log messages will be written to $LOG_TERM and $LOG_FILE"
 
 # =============================
 # === Boot device detection ===
@@ -48,11 +48,11 @@ log "Log messages will be written to tty3 and $LOG_FILE"
 log "=== START: Boot Device Detection ==="
 
 # --- Identify by label (/dev/disk/by-label) ---
-# Die meisten Installer-Sticks haben ein Label (z.B. "DEBIAN_12", "KALI")
+# Most installer sticks have a label (e.g. "DEBIAN_12", "KALI")
 BOOT_DEV_RAW=""
 log "Checking /dev/disk/by-label"
 if ls /dev/disk/by-label/* >/dev/null 2>&1; then
-    # Nimm das erste gefundene Label und löse es zum echten Device auf
+    # Take the first label found and resolve to real device
     BOOT_DEV_RAW=$(readlink -f /dev/disk/by-label/* 2>/dev/null | head -n1)
     if [ -n "$BOOT_DEV_RAW" ]; then
         log "Found boot device via Label: $BOOT_DEV_RAW"
@@ -81,7 +81,7 @@ if [ -z "$BOOT_DEV_RAW" ]; then
     fi
 fi
 
-# --- Fallback warning ---
+# --- Fallback warning or post-processing ---
 BOOT_DISK=""
 if [ -z "$BOOT_DEV_RAW" ]; then
     log "WARNING: Could not automatically detect boot device!"
@@ -91,26 +91,26 @@ else
     BOOT_NAME=$(basename "$BOOT_DEV_RAW")
     log "Raw boot device name: $BOOT_NAME"
 
-    # Fall A: NVMe Partition (z.B. nvme0n1p2 -> nvme0n1)
-    # Muster: nvme[Nummer]n[Nummer]p[Nummer]
+    # Case A: NVMe partition (e.g. nvme0n1p2 -> nvme0n1)
+    # Pattern: nvme[number]n[number]p[number]
     if echo "$BOOT_NAME" | grep -qE '^nvme[0-9]+n[0-9]+p[0-9]+'; then
         BOOT_DISK=$(echo "$BOOT_NAME" | sed 's/p[0-9]*$//')
         log "Detected NVMe partition. Normalized to: $BOOT_DISK"
     
-    # Fall B: SATA/SCSI/USB Partition (z.B. sda1, sdb4 -> sda, sdb)
-    # Muster: sd[Buchstabe][Nummer]
+    # Case B: SATA/SCSI/USB partition (e.g. sda1, sdb4 -> sda, sdb)
+    # Pattern: sd[letter][number]
     elif echo "$BOOT_NAME" | grep -qE '^sd[a-z][0-9]+'; then
         BOOT_DISK=$(echo "$BOOT_NAME" | sed 's/[0-9]*$//')
         log "Detected SATA/USB partition. Normalized to: $BOOT_DISK"
     
-    # Fall C: Es ist bereits eine Basis-Disk (z.B. nvme0n1, sr0)
+    # Case C: it's already a base disk an not a partition (e.g. nvme0n1, sr0)
     else
         BOOT_DISK="$BOOT_NAME"
         log "Device appears to be a base disk already: $BOOT_DISK"
     fi
 fi
 
-# --- 4. Ergebnis ausgeben ---
+# --- Print result ---
 if [ -n "$BOOT_DISK" ]; then
     log "SUCCESS: Boot Base Disk identified as: /dev/$BOOT_DISK"
 else
@@ -125,39 +125,40 @@ log "=== END: Boot Device Detection ==="
 
 # Candidate file
 # Format: "SIZE_MB NAME TYPE_PRIORITY"
-# Typ: 1=NVMe, 2=SSD (SATA/VirtIO non-rot), 3=HDD (rotational)
+# Type priority: 1=NVMe, 2=SSD (SATA/VirtIO non-rotational), 3=HDD (rotational)
 CANDIDATE_FILE="/tmp/candidates.txt"
-> "$CANDIDATE_FILE" # Datei leer machen
+> "$CANDIDATE_FILE" # Empty file
 
 # Durchlaufe ALLE Block-Geräte im System
+# Cycle over all block devices of system
 log "=== START: Candidate identification ==="
 for dev_path in /sys/block/*; do
     DEV_NAME=$(basename "$dev_path")
     DISK="/dev/$DEV_NAME"
 
-    # 1. Filter: Ist es ein Block Device?
+    # 1. filter: is it really a block device?
     if [ ! -b "$DISK" ]; then continue; fi
 
-    # 2. Filter: Ignoriere das BOOT-GERÄT
+    # 2. filter: ignore the boot device
     if [ -n "$BOOT_DISK" ] && [ "$DEV_NAME" = "$BOOT_DISK" ]; then
         log "Skipping BOOT device: $DEV_NAME"
         continue
     fi
 
-    # 3. Filter: Ignoriere System-Geräte (RAM, Loop, CD-ROM)
+    # 3. filter: ignore system devices (RAM, Loop, CD-ROM)
     if echo "$DEV_NAME" | grep -qE '^(ram|loop|sr|md)'; then
         log "Skipping system device: $DEV_NAME"
         continue
     fi
 
-    # 4. Filter: Ignoriere USB-Geräte (nur bei sdX relevant, NVMe ist nie USB)
-    # Wir prüfen es zur Sicherheit bei allen, aber es betrifft meist nur sdX
+    # 4. filter: ingnore USB devices
     if is_usb "$DEV_NAME"; then
         log "Skipping USB device: $DEV_NAME"
         continue
     fi
 
-    # Wenn wir hier sind, ist es eine potenzielle Ziel-Disk
+    # If we arrive here, it is a potential target disk
+    # Scip if size check fails or is inconclusive
     SIZE=$(get_size_mb "$DISK")
     if [ -z "$SIZE" ] || [ "$SIZE" -eq 0 ]; then
         log "Skipping $DEV_NAME (Size unknown or 0)"
@@ -171,26 +172,28 @@ for dev_path in /sys/block/*; do
         continue
     fi
 
-    # Typ bestimmen (NVMe vs SSD vs HDD)
+    # Determine type priority (NVMe vs SSD vs HDD)
     TYPE=3 # Default: HDD
+    TYPE_NAME="HDD"
     if echo "$DEV_NAME" | grep -q '^nvme'; then
         TYPE=1 # NVMe
+	TYPE_NAME="NVMe"
     else
-        # Prüfe rotational für SATA/VirtIO/etc
+        # Check rotational for SATA/VirtIO/etc
         ROT=$(cat "/sys/block/$DEV_NAME/queue/rotational" 2>/dev/null)
         if [ "$ROT" = "0" ]; then
             TYPE=2 # SSD
-        else
-            TYPE=3 # HDD
+            TYPE_NAME="SSD"
         fi
     fi
 
-    log "Found candidate: $DEV_NAME (${SIZE}MB, Type: $TYPE)"
+    log "Found candidate: $DEV_NAME (${SIZE}MB $TYPE_NAME)"
     echo "$SIZE $DEV_NAME $TYPE" >> "$CANDIDATE_FILE"
 done
-# --- Anzeige der Kandidaten (Debug) ---
+
+# --- Display candidates (debug) ---
 log "Raw candidates list:"
-cat "$CANDIDATE_FILE" > "$LOG_TERM" # Zeigt die Liste sauber auf TTY3
+cat "$CANDIDATE_FILE" > "$LOG_TERM"
 cat "$CANDIDATE_FILE" >> "$LOG_FILE"
 log "=== END: Candidate identification ==="
 
@@ -198,7 +201,7 @@ log "=== END: Candidate identification ==="
 # === Target disk selection ===
 # =============================
 log "=== START: Candidate selection ==="
-# Sortiere nach: 1. Typ (aufsteigend), 2. Größe (aufsteigend)
+# Sort by: 1. type priority (ascending), 2. disk size in MB (ascending)
 BEST_MATCH=$(sort -k3,3n -k1,1n "$CANDIDATE_FILE" | head -n1)
 
 TARGET=""
@@ -207,11 +210,11 @@ if [ -n "$BEST_MATCH" ]; then
     TARGET="/dev/$TARGET_NAME"
     log "SELECTED TARGET: $TARGET (Size: $(echo $BEST_MATCH | awk '{print $1}')MB, Type: $(echo $BEST_MATCH | awk '{print $3}'))"
     
-    log "Identified $TARGET as installation target"
+    log "SUCCESS: Identified $TARGET as installation target"
 else
     log "ERROR: No suitable target disk found!"
     log "Candidates were: $CANDIDATES"
-    log "Boot Disk was: $BOOT_DISK"
+    log "Boot disk was: $BOOT_DISK"
 fi
 
 log "=== END: Candidate selection ==="
@@ -219,24 +222,24 @@ log "=== END: Candidate selection ==="
 # ================================
 # === Setting partman variable ===
 # ================================
-# Prüfen, ob das Gerät existiert
+# Check, if device exists
 log "=== START: debconf-set ==="
-log "executing 'debconf-set partman-auto/disk $TARGET'"
+log "Executing 'debconf-set partman-auto/disk $TARGET'"
 if [ ! -b "$TARGET" ]; then
     log "ERROR: Device $TARGET does not exist!"
-    # Liste verfügbare Devices zur Fehlersuche
     log "Available block devices:"
     ls /dev/sd* /dev/nvme* 2>/dev/null >> "$LOG_FILE"
     ls /dev/sd* /dev/nvme* 2>/dev/null > "$LOG_TERM"
 else
     # Setting partitioning target
     debconf-set partman-auto/disk "$TARGET"
-    log "SUCCESS: partman-auto/disk set to $TARGET"
+    log "INFO: partman-auto/disk set to $TARGET"
     # Setting grub target
     debconf-set grub-installer/bootdev "$TARGET"
-    log "SUCCESS: grub-installer/bootdev set to: $TARGET"
+    log "INFO: grub-installer/bootdev set to: $TARGET"
 fi
 
 log "=== END: debconf-set ==="
-
+log "================================="
 log "=== End Disk Selection Script ==="
+log "================================="
