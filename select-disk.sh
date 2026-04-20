@@ -1,5 +1,15 @@
 #!/bin/sh
 
+# This script will identify a single disk as target for partition and installation of the OS and GRUB.
+# It will make a selection according these priorities:
+# 1. A block device
+# 2. Not the boot device (e.g. the USB stick the installer was booted from)
+# 3. Not a system device (RAM, Loop, CD-Rom)
+# 4. Not a USB device
+# 5. At least 20GB
+# 6. NVMe before SATA SDD before HDD
+# 7. Smaller disk before larger disk
+
 # --- Configuration ---
 LOG_TERM="/dev/tty3"
 LOG_FILE="/tmp/disk-select.log"
