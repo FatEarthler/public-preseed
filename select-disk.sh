@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# This script will identify a single disk as target for partition and installation of the OS and GRUB.
+# This script will identify a single disk as target for partitioning and installation of the OS and GRUB.
 # It will make a selection according these priorities:
 # 1. A block device
 # 2. Not the boot device (e.g. the USB stick the installer was booted from)
