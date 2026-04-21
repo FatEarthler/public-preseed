@@ -4,6 +4,7 @@
 | ---- | ------- | ------ |
 | preseedminiBIOS.cfg | testfile for BIOS boot | working |
 | preseedminiUEFI.cfg | testfile for UEFI boot | work in progress |
+| select-disk.sh | script to identify target disk for installation | working |
 
 # Notes
 
