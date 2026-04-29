@@ -8,6 +8,7 @@ TODOS:
 - [ ] fix md5sum, because of changes to grub.cfg (menu and txt are md5sum checked) ==> test if required at all. md5sum.txt could be for manual verification purposes only
 - [ ] automate iso modification on server, triggered by changes to preseed or postinstall files or newer version of net-installer
 - [ ] set timeout for boot menu
+- [ ] Remove dialog to confirm that UEFI installation overwrites existing MBR from previous BIOS installation
 
 Status of PoC:
 
