@@ -8,7 +8,8 @@ TODOS:
 - [ ] fix md5sum, because of changes to grub.cfg (menu and txt are md5sum checked) ==> test if required at all. md5sum.txt could be for manual verification purposes only
 - [ ] automate iso modification on server, triggered by changes to preseed or postinstall files or newer version of net-installer
 - [ ] set timeout for boot menu
-- [ ] Remove dialog to confirm that UEFI installation overwrites existing MBR from previous BIOS installation
+- [ ] Remove dialog to confirm that UEFI installation overwrites existing MBR from previous BIOS installation --> this seems to 'work' now, the dialog no longer appears. But I have to start the partitioning step from the menu now, it does not do so automatically
+- [ ] test if system really gets installed to the disk selected form select-disk.sh. It presently does not seem to be the case!
 
 Status of PoC:
 
