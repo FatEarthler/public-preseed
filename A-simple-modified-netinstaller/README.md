@@ -9,6 +9,7 @@ TODOS:
 - [ ] set timeout for boot menu
 - [ ] Remove dialog to confirm that UEFI installation overwrites existing MBR from previous BIOS installation --> this seems to 'work' now, the dialog no longer appears. But I have to start the partitioning step from the menu now, it does not do so automatically
 - [ ] test if system really gets installed to the disk selected form select-disk.sh. It presently does not seem to be the case!
+- [ ] let chat gpt debut your 'select-disk.sh'
 
 Status of PoC:
 
