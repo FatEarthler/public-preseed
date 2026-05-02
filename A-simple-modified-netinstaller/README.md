@@ -8,8 +8,8 @@ TODOS:
 - [ ] automate iso modification on server, triggered by changes to preseed or postinstall files or newer version of net-installer
 - [ ] set timeout for boot menu
 - [ ] Remove dialog to confirm that UEFI installation overwrites existing MBR from previous BIOS installation --> this seems to 'work' now, the dialog no longer appears. But I have to start the partitioning step from the menu now, it does not do so automatically
-- [ ] test if system really gets installed to the disk selected form select-disk.sh. It presently does not seem to be the case!
-- [ ] let chat gpt debut your 'select-disk.sh'
+- [ ] test if system really gets installed to the disk selected form select-disk.sh. It presently does not seem to be the case! ==> UPDATE: selection seems to work, installation seems to target the identified disk. but after installation, system does not boot from the fresh install.
+- [ ] let chat gpt debug your 'select-disk.sh'
 
 Status of PoC:
 
