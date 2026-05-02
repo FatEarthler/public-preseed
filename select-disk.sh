@@ -234,6 +234,7 @@ log "=== END: Candidate selection ==="
 # ================================
 # === Setting partman variable ===
 # ================================
+TARGET = "/dev/sdb" # testing only
 # Check, if device exists
 log "=== START: debconf-set ==="
 log "Executing 'debconf-set partman-auto/disk $TARGET'"

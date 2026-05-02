@@ -4,8 +4,7 @@ TODOS:
 - [ ] enable UEFI install, by creating a 2nd preseed
 - [ ] set bootmenu keyboard layout to CH
 - [ ] add postinstall.sh
-- [ ] also copy menu.cfg and grub.cfg
-- [ ] fix md5sum, because of changes to grub.cfg (menu and txt are md5sum checked) ==> test if required at all. md5sum.txt could be for manual verification purposes only
+- [x] fix md5sum, because of changes to grub.cfg (menu and txt are md5sum checked) ==> test if required at all. md5sum.txt could be for manual verification purposes only ==> not needed, it works well without.
 - [ ] automate iso modification on server, triggered by changes to preseed or postinstall files or newer version of net-installer
 - [ ] set timeout for boot menu
 - [ ] Remove dialog to confirm that UEFI installation overwrites existing MBR from previous BIOS installation --> this seems to 'work' now, the dialog no longer appears. But I have to start the partitioning step from the menu now, it does not do so automatically
@@ -16,7 +15,7 @@ Status of PoC:
 | | hardware (USB) | optical (VM) |
 |---|----|----|
 |BIOS| OK | OK |
-|UEFI| | |
+|UEFI| | OK |
 
 This approach takes a kali linux NetInstaller, modifies it s.t. during install it loads a preseed.cfg and postinstall.sh from a public site (no authentication) to fully automate installation. The modified iso is then used to create a bootable usb stick. NetInstaller is chosen because it downloads current packet versions during installation. The boot medium (usb stick) however, has to be recreated if a newer version of the NetInstaller is desired.
 
